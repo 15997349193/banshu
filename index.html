@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html data-page-node-id="WSuEaVWH6H7BChHyZHS1DW" lang="zh-CN"><head data-page-node-id="jmDDxT9h3JZXo7TAB2AVWM">
+<meta data-page-node-id="rQJrmHQOr9mC0ArHmJyS9M" charset="UTF-8">
+<meta data-page-node-id="DoUYeBMzDe0OwgP2fAebDt" content="width=device-width, initial-scale=1.0" name="viewport">
+<title data-page-node-id="GBravo0HVbFaB5U3auggtA" data-pnid-children="HJzIAa7wXcOoLB1pehoQyL">翰墨板书 · 通用技术教学课堂</title>
+<style data-page-node-id="n4HtiIyqelimjnSrEM5zHx" data-pnid-children="uHGYoZ8XgGd8IQQ7mi9GcZ">
+  * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+    background: #e9e4d8;
+  }
+
+  /* ---------- 板面（米白纸面，四色笔迹均清晰） ---------- */
+  #board-wrap {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse at 25% 15%, rgba(255,255,255,.9), transparent 55%),
+      radial-gradient(ellipse at 80% 85%, rgba(210,200,180,.5), transparent 60%),
+      linear-gradient(160deg, #f7f3ea 0%, #efe9dc 50%, #f2ede2 100%);
+    box-shadow: inset 0 0 120px rgba(120,105,80,.18);
+  }
+  canvas#board {
+    position: absolute; inset: 0;
+    touch-action: none;
+    cursor: crosshair;
+  }
+
+  /* ---------- 工具栏 ---------- */
+  #toolbar {
+    position: fixed; top: 50%; left: 18px; transform: translateY(-50%);
+    z-index: 10;
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    background: rgba(38, 46, 42, .92);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 18px;
+    padding: 14px 10px;
+    box-shadow: 0 10px 40px rgba(0,0,0,.3);
+  }
+  .tool-group { display: flex; flex-direction: column; gap: 8px; align-items: center; }
+  .divider { width: 70%; height: 1px; background: rgba(255,255,255,.14); margin: 4px 0; }
+
+  .tool-btn {
+    width: 52px; height: 52px;
+    border: 1.5px solid transparent;
+    border-radius: 14px;
+    background: transparent;
+    color: #d8e5df;
+    font-size: 22px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all .18s ease;
+    position: relative;
+  }
+  .tool-btn:hover { background: rgba(255,255,255,.1); transform: translateY(-1px); }
+  .tool-btn.active {
+    background: rgba(255, 214, 112, .18);
+    border-color: #ffd670;
+    color: #ffe9b0;
+    box-shadow: 0 0 14px rgba(255,214,112,.25);
+  }
+  .tool-btn .tip {
+    position: absolute; left: 62px; top: 50%; transform: translateY(-50%);
+    background: rgba(0,0,0,.85); color: #fff;
+    font-size: 12px; padding: 5px 10px; border-radius: 6px;
+    white-space: nowrap; opacity: 0; pointer-events: none;
+    transition: opacity .15s;
+  }
+  .tool-btn:hover .tip { opacity: 1; }
+  .tool-btn svg { width: 26px; height: 26px; }
+
+  /* ---------- 颜色（固定四色） ---------- */
+  #colors { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .color-dot {
+    width: 26px; height: 26px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,.35);
+    cursor: pointer; transition: transform .15s, box-shadow .15s;
+    position: relative;
+  }
+  .color-dot:hover { transform: scale(1.18); }
+  .color-dot.active {
+    transform: scale(1.25);
+    box-shadow: 0 0 0 2px #262e2a, 0 0 0 4.5px #ffd670;
+  }
+
+  /* ---------- 粗细（固定四档） ---------- */
+  #sizes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .size-dot {
+    width: 26px; height: 26px; border-radius: 50%;
+    border: 1.5px solid rgba(255,255,255,.18);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform .15s, box-shadow .15s, border-color .15s;
+  }
+  .size-dot span { display: block; border-radius: 50%; background: #d8e5df; }
+  .size-dot:hover { transform: scale(1.15); }
+  .size-dot.active {
+    border-color: #ffd670;
+    box-shadow: 0 0 10px rgba(255,214,112,.35);
+  }
+  .size-dot.active span { background: #ffe9b0; }
+
+  /* ---------- 标题 ---------- */
+  #title {
+    position: fixed; top: 18px; left: 50%; transform: translateX(-50%);
+    z-index: 9; color: rgba(90,78,55,.5);
+    font-size: 17px; letter-spacing: 8px;
+    font-family: "STKaiti", "KaiTi", serif;
+    pointer-events: none;
+  }
+
+  /* ---------- 底部提示 ---------- */
+  #hint {
+    position: fixed; bottom: 12px; right: 16px; z-index: 9;
+    color: rgba(90,78,55,.4); font-size: 12px;
+    pointer-events: none;
+  }
+
+  /* ---------- 清空确认 ---------- */
+  #confirm-clear {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    z-index: 20; display: none;
+    background: rgba(38,46,42,.97);
+    border: 1px solid rgba(255,255,255,.15);
+    border-radius: 16px; padding: 26px 34px;
+    text-align: center; color: #e8f2ee;
+    box-shadow: 0 16px 60px rgba(0,0,0,.45);
+  }
+  #confirm-clear p { margin-bottom: 18px; font-size: 15px; }
+  #confirm-clear .btns { display: flex; gap: 12px; justify-content: center; }
+  #confirm-clear button {
+    padding: 8px 22px; border-radius: 10px; border: none;
+    cursor: pointer; font-size: 14px; transition: all .15s;
+  }
+  #btn-yes { background: #e05b5b; color: #fff; }
+  #btn-yes:hover { background: #c94949; }
+  #btn-no { background: rgba(255,255,255,.14); color: #d8e5df; }
+  #btn-no:hover { background: rgba(255,255,255,.24); }
+
+  #toast {
+    position: fixed; top: 66px; left: 50%; transform: translateX(-50%);
+    z-index: 30; background: rgba(38,46,42,.9); color: #ffe9b0;
+    padding: 8px 18px; border-radius: 20px; font-size: 13px;
+    opacity: 0; transition: opacity .3s; pointer-events: none;
+  }
+</style>
+<style data-page-node-id="YYRpWf5gpDMguOkZnagwuR" data-pnid-children="UORcZY4zd2NrwBlM28l0zg" id="__dm_no_drag_style__">* { -webkit-user-drag: none !important; }</style><style data-page-node-id="0dyeSSCxv8W6ANV3lsBvRo" data-pnid-children="yprEZ96xVWM4ZLAmak6JCc" id="__dm_bindable_badge_style__">[data-sp-bindable="database"]{outline:1px dashed #0088ff;outline-offset:2px;border-radius:4px;}[data-sp-bindable="database"] *{pointer-events:none !important;transition:none !important;animation:none !important;}[data-sp-bindable="database"]{transition:none !important;animation:none !important;}</style></head>
+<body data-page-node-id="qkq1Y9wfz3oBl4EbxYiFh2">
+
+<div data-page-node-id="mfEcsozmQw17B4LSFTsnx6" id="board-wrap"><canvas data-page-node-id="GxF3vHcpM1LQDInuORjbbE" height="890" id="board" width="1919" style="width:1919px; height:890px; cursor:crosshair"></canvas></div>
+<div data-page-node-id="2UhkSgDtSeWl3Uh7ksamec" id="title"><!--pnid:H6C7fiqyprmzTgSNXyUIKY-->翰 墨 板 书</div>
+<div data-page-node-id="eJZEN2aUqHs79DRHoJWTaW" id="hint"><!--pnid:y1KLXrl4TnxKLAkk4pTxee-->Ctrl+Z 撤销 · B 铅笔 · P 圆珠笔 · E 黑板擦 · C 清空</div>
+
+<div data-page-node-id="u6yjEmYLQQ00eo4VLGTZuX" id="toolbar">
+  <!--pnid:qI70Se2lPNu1XQDMQkKQse--><!-- 书写 / 黑板擦 -->
+  <div data-page-node-id="zE1Pmu8VOyujh0zQxN3Kce" class="tool-group">
+    <button data-page-node-id="DGlR5NHtHk9YPVdcGipt2O" class="tool-btn" data-tool="pencil">
+      <svg data-page-node-id="nk97FKrVqTEp7BQll1lhld" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewBox="0 0 24 24"><path data-page-node-id="XE29ylzZebvAl1KL2V9BtG" d="M17 3l4 4L8 20l-5 1 1-5L17 3z"></path><path data-page-node-id="QqZr8NVzzJ4t1AmXauJ7RT" d="M14 6l4 4"></path></svg>
+      <span data-page-node-id="ntdGNFfLSwVBwZbyKz8jAL" class="tip"><!--pnid:Jj3GX82ceLQ4ebajCF2WpS-->铅笔 (B)</span>
+    </button>
+    <button data-page-node-id="PgOgyEWmW0ZgEzAOcPE6Pu" class="tool-btn active" data-tool="pen">
+      <svg data-page-node-id="UNaq1yIxVzJmkyGUnMHkRi" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewBox="0 0 24 24"><path data-page-node-id="tX271YWd2BATVCu0GzYZja" d="M3 21l2-6L17.5 2.5a2.1 2.1 0 013 3L8 18l-5 3z"></path><path data-page-node-id="mP3LgtdyTeGFEjeGAUAHMF" d="M14.5 5.5l4 4"></path></svg>
+      <span data-page-node-id="Iier7wGwIouuyMH4VS3CnI" class="tip"><!--pnid:LJwlcevda4f7A1YK6Yxcye-->圆珠笔 (P)</span>
+    </button>
+    <button data-page-node-id="LSXJVdQiw8cddYkDRsQlB9" class="tool-btn" data-tool="eraser">
+      <svg data-page-node-id="ZQalnKnf5DytsYVoYHdLYf" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewBox="0 0 24 24"><path data-page-node-id="Ad1GESwsQctCbHEqtm2iev" d="M20 20H8.5l-4.6-4.6a2 2 0 010-2.8l8-8a2 2 0 012.8 0l5.6 5.6a2 2 0 010 2.8L13.5 20"></path><path data-page-node-id="xGMA3Zzs0zfaVsMJfH8Hzy" d="M8.5 9.5l6 6"></path></svg>
+      <span data-page-node-id="RbyagJCy5HDJwdNohQDZd5" class="tip"><!--pnid:KwL1oUgvzMv4I8Lg3XX3Z5-->黑板擦 (E)</span>
+    </button>
+  </div>
+
+  <div data-page-node-id="Ew3IgLppHSe5zXJXrvnZgF" class="divider"></div>
+
+  <!--pnid:38VhcsBH1HHYVLrM3Ls1Y9--><!-- 颜色：红 黄 黑 绿 -->
+  <div data-page-node-id="qlG2cArCwJK8xGru3Z3JMH" class="tool-group">
+    <div data-page-node-id="cmykIVbB9MOsTgHd7xb5p1" id="colors">
+      <div data-page-node-id="12ZEF3QBzDFCSL8gy9BBDi" class="color-dot active" data-color="#1a1a1a" title="黑" style="background:#1a1a1a"></div>
+      <div data-page-node-id="Gi7Ab5PPQOmBjI8CeNaaYs" class="color-dot" data-color="#d6382e" title="红" style="background:#d6382e"></div>
+      <div data-page-node-id="bfMvQ1g83Zhoh3SYTmNXUN" class="color-dot" data-color="#e8a013" title="黄" style="background:#e8a013"></div>
+      <div data-page-node-id="Rf4IK3oeCCFKh1J0NEpgm6" class="color-dot" data-color="#1f8a4c" title="绿" style="background:#1f8a4c"></div>
+    </div>
+  </div>
+
+  <div data-page-node-id="pCPg94WBoKLsfBBMTmMUnw" class="divider"></div>
+
+  <!--pnid:kbQy44P8hcLhAabgig8dQ2--><!-- 粗细：4 / 5 / 6 / 7 -->
+  <div data-page-node-id="yI8LxEzMyAGIUkeZSWlgod" class="tool-group">
+    <div data-page-node-id="1RKEEz93nRp4qNgbsBRfoQ" id="sizes">
+      <div data-page-node-id="P6IxFmJkwSx10QJzwBUggM" class="size-dot" data-size="4"><span data-page-node-id="nAy8XQVcnV2ZFw649JnHPY" style="width:8px; height:8px"></span></div>
+      <div data-page-node-id="XEQshfXLP4VPmHo6qN1whB" class="size-dot" data-size="5"><span data-page-node-id="WqmeqAFtuGlvnJR4vH9l7f" style="width:12px; height:12px"></span></div>
+      <div data-page-node-id="vOuc94sg6ujujzV6vwqrfQ" class="size-dot" data-size="6"><span data-page-node-id="34MRthp1HWas8Rxsuedmp8" style="width:16px; height:16px"></span></div>
+      <div data-page-node-id="m1iGlUuGMxQ3eoXIjdoPd6" class="size-dot active" data-size="7"><span data-page-node-id="3gFeQ4EdJ9EYFkPfNOR3yb" style="width:20px; height:20px"></span></div>
+    </div>
+  </div>
+
+  <div data-page-node-id="juX3JNgvGhJaJi6iNb0Fxh" class="divider"></div>
+
+  <!--pnid:y6OB3sUkpzXnUzxwLJJM4z--><!-- 操作 -->
+  <div data-page-node-id="uR2gJM1HYC5jNMFGHiF6Lr" class="tool-group">
+    <button data-page-node-id="Yj3eiA51sUfbvsNFPY1g9W" class="tool-btn" id="btn-undo">
+      <svg data-page-node-id="gXZJY1AATdQxpxsYoUVHuo" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewBox="0 0 24 24"><path data-page-node-id="WUYmWa7ztUY7LR3i6ZSyPZ" d="M9 14L4 9l5-5"></path><path data-page-node-id="WSI5poX5pDJlRr1pUvA5bE" d="M4 9h10a6 6 0 016 6v1"></path></svg>
+      <span data-page-node-id="WJcPPGXGYH6gyBogKgOaKp" class="tip"><!--pnid:xIZiCc3wo1QLKaSoiPZXTF-->撤销 (Ctrl+Z)</span>
+    </button>
+    <button data-page-node-id="yD5LXu1izav96cykFCfhxZ" class="tool-btn" id="btn-clear" style="color:#ff9b8a">
+      <svg data-page-node-id="e0d4aozk1hh8MPoqGPtYOy" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewBox="0 0 24 24"><path data-page-node-id="GVGtJQnUScAjA5Ezc6sT9P" d="M3 6h18"></path><path data-page-node-id="L2hdDKeynCbsAPPu4RFtKV" d="M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2"></path><path data-page-node-id="xdLCgqExB5j9FSE8NXuX8O" d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"></path><path data-page-node-id="dWbqkooMbUrYUfCbJfDbD3" d="M10 11v6M14 11v6"></path></svg>
+      <span data-page-node-id="VwA3Ah96SSJj1LCfp0Eoqz" class="tip"><!--pnid:ujiBa480U5wuAHGouYfxaW-->一键清空 (C)</span>
+    </button>
+  </div>
+</div>
+
+<div data-page-node-id="Qw8szrOYsyjiFEAmrbQENO" id="confirm-clear" style="display:none">
+  <p data-page-node-id="PuyhWcyA7FuvUjF3eZDPtn"><!--pnid:d4CFPhSoirtxiFC2dTjCA7-->确定要清空整个板书吗？<br data-page-node-id="djkZ9VgU4LM50cptEiRFWy"><span data-page-node-id="LnmKNZ7X5qKNMXuEzFbRF3" style="font-size:12px; color:#9fb5ac"><!--pnid:aDn8boYtgpvytms1LCz4zq-->此操作不可恢复</span></p>
+  <div data-page-node-id="pCaGGoJsebAytSrCmfTan6" class="btns">
+    <button data-page-node-id="wQy6F9MsCeaYcGAf8FoWtg" id="btn-yes"><!--pnid:81seKf2ypzkGjTye1P7U8b-->清空</button>
+    <button data-page-node-id="AgIHAw5W9MxenaLA4jYIkN" id="btn-no"><!--pnid:whgTAFx9QxuFv5cdpTOwaF-->取消</button>
+  </div>
+</div>
+
+<div data-page-node-id="ABYOgsqjKINjel6RFhiuHm" id="toast" style="opacity:0"><!--pnid:PQbLEuRA1uD9ph4MqfYaky-->板书已清空</div>
+
+<script data-page-node-id="ZBCYy3ZO9IKJmNouxiXSut" data-pnid-children="T7atLubtIFEa2zz0iGEHhb">
+(function () {
+  "use strict";
+
+  const canvas = document.getElementById("board");
+  const ctx = canvas.getContext("2d", { willReadFrequently: false });
+  const DPR = Math.min(window.devicePixelRatio || 1, 2);
+
+  // ---------- 状态 ----------
+  let tool = "pen";              // pencil | pen（圆珠笔）| eraser
+  let color = "#1a1a1a";
+  let baseSize = 7;              // 笔触粗细：4 / 5 / 6 / 7 四档
+  let drawing = false;
+  let erased = false;            // 本次笔迹是否动过橡皮擦（决定快照时机）
+
+  // 撤销栈：保存清空前/每次笔画前与橡皮擦启用前的快照
+  const undoStack = [];
+  const MAX_UNDO = 30;
+
+  // 笔迹平滑状态
+  let pts = [];                  // 最近点序列
+  let last = null;               // 上一采样点 {x,y,t}
+  let vel = 0;                   // 平滑速度
+  let width = 1;                 // 当前笔宽
+
+  function snapshot() {
+    if (undoStack.length >= MAX_UNDO) undoStack.shift();
+    undoStack.push(canvas.toDataURL());
+  }
+
+  function resize() {
+    const w = window.innerWidth, h = window.innerHeight;
+    const img = w > 0 && canvas.width > 0 ? canvas.toDataURL() : null;
+    canvas.width = w * DPR;
+    canvas.height = h * DPR;
+    canvas.style.width = w + "px";
+    canvas.style.height = h + "px";
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+    if (img) {
+      const image = new Image();
+      image.onload = () => ctx.drawImage(image, 0, 0, w, h);
+      image.src = img;
+    }
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  // ---------- 工具参数 ----------
+  const TOOL_CFG = {
+    pencil:  { sizeRatio: 0.8,  velSmooth: 0.4,  maxW: 1.3,  minW: 0.7,  alpha: 0.82 },
+    pen:     { sizeRatio: 0.86, velSmooth: 0.5,  maxW: 1.15, minW: 0.85, alpha: 1 },
+    eraser:  { sizeRatio: 2.6,  velSmooth: 0.6,  maxW: 1, minW: 1, alpha: 1 }
+  };
+
+  function targetWidth(dt, cfg) {
+    // 速度 -> 笔宽：写得快则细，写得慢则粗（书法提按感）
+    const v = Math.min(dt === 0 ? 0 : dist(last, cur) / dt, 4); // px/ms 归一
+    const t = Math.min(v / 1.2, 1);                            // 0慢 ~ 1快
+    const base = baseSize * cfg.sizeRatio;
+    return base * (cfg.maxW - (cfg.maxW - cfg.minW) * t);
+  }
+
+  // ---------- 绘制核心 ----------
+  function strokeSeg(x0, y0, x1, y1, w0, w1, cfg) {
+    ctx.save();
+    if (tool === "eraser") {
+      ctx.globalCompositeOperation = "destination-out";
+      ctx.strokeStyle = "rgba(0,0,0,1)";
+      ctx.globalAlpha = 1;
+    } else {
+      ctx.globalCompositeOperation = "source-over";
+      ctx.strokeStyle = color;
+      ctx.globalAlpha = cfg.alpha;
+    }
+    // 中点二次贝塞尔平滑
+    const mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
+    ctx.beginPath();
+    ctx.lineWidth = (w0 + w1) / 2;
+    ctx.moveTo(x0, y0);
+    ctx.quadraticCurveTo(x0, y0, mx, my);
+    ctx.stroke();
+    ctx.lineWidth = w1;
+    ctx.beginPath();
+    ctx.moveTo(mx, my);
+    ctx.quadraticCurveTo(x1, y1, x1, y1);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawDot(x, y, w, cfg) {
+    ctx.save();
+    if (tool === "eraser") {
+      ctx.globalCompositeOperation = "destination-out";
+      ctx.fillStyle = "rgba(0,0,0,1)";
+    } else {
+      ctx.fillStyle = color;
+      ctx.globalAlpha = cfg.alpha;
+    }
+    ctx.beginPath();
+    ctx.arc(x, y, w / 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // ---------- 指针事件 ----------
+  let cur = { x: 0, y: 0 };
+
+  function getPos(e) {
+    const r = canvas.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top, t: performance.now() };
+  }
+  function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+
+  canvas.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0 && e.pointerType === "mouse") return;
+    canvas.setPointerCapture(e.pointerId);
+    drawing = true;
+    erased = false;
+    snapshot(); // 每笔开始前保存，可撤销
+    const p = getPos(e);
+    last = p;
+    cur = p;
+    vel = 0;
+    width = baseSize * TOOL_CFG[tool].sizeRatio * (tool === "eraser" ? 1 : 1);
+    const cfg = TOOL_CFG[tool];
+    width = tool === "eraser"
+      ? baseSize * cfg.sizeRatio
+      : baseSize * cfg.sizeRatio * cfg.minW * 2.2; // 起笔稍收敛
+    drawDot(p.x, p.y, width, cfg);
+  });
+
+  canvas.addEventListener("pointermove", (e) => {
+    if (!drawing) return;
+    const p = getPos(e);
+    const cfg = TOOL_CFG[tool];
+    const dt = Math.max(p.t - last.t, 1);
+    const d = dist(last, p);
+
+    // 忽略极小移动，保证流畅
+    if (d < 0.8 && tool !== "eraser") return;
+
+    // 速度平滑 -> 目标笔宽 -> 笔宽平滑（提按过渡自然）
+    const target = targetWidth(dt, cfg);
+    width += (target - width) * (1 - cfg.velSmooth);
+
+    strokeSeg(last.x, last.y, p.x, p.y, width, width, cfg);
+
+    last = p;
+  });
+
+  function endStroke() {
+    if (!drawing) return;
+    drawing = false;
+    // 收笔：轻提
+    if (tool !== "eraser" && last) {
+      const cfg = TOOL_CFG[tool];
+      drawDot(last.x, last.y, Math.max(width * 0.6, 0.5), cfg);
+    }
+  }
+  canvas.addEventListener("pointerup", endStroke);
+  canvas.addEventListener("pointercancel", endStroke);
+  canvas.addEventListener("pointerleave", endStroke);
+
+  // ---------- UI 绑定 ----------
+  const toolBtns = document.querySelectorAll("[data-tool]");
+  function setTool(t) {
+    tool = t;
+    toolBtns.forEach(b => b.classList.toggle("active", b.dataset.tool === t));
+    canvas.style.cursor = t === "eraser"
+      ? "cell"
+      : "crosshair";
+  }
+  toolBtns.forEach(b => b.addEventListener("click", () => setTool(b.dataset.tool)));
+
+  const colorDots = document.querySelectorAll(".color-dot");
+  colorDots.forEach(d => d.addEventListener("click", () => {
+    color = d.dataset.color;
+    colorDots.forEach(x => x.classList.toggle("active", x === d));
+    if (tool === "eraser") setTool("pen"); // 选色后自动回到书写
+  }));
+
+  // 粗细四档
+  const sizeDots = document.querySelectorAll(".size-dot");
+  sizeDots.forEach(d => d.addEventListener("click", () => {
+    baseSize = +d.dataset.size;
+    sizeDots.forEach(x => x.classList.toggle("active", x === d));
+  }));
+
+  // 撤销
+  function undo() {
+    if (!undoStack.length) { showToast("没有可撤销的操作"); return; }
+    const data = undoStack.pop();
+    const img = new Image();
+    img.onload = () => {
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0);
+      ctx.restore();
+    };
+    img.src = data;
+  }
+  document.getElementById("btn-undo").addEventListener("click", undo);
+
+  // 一键清空（带确认）
+  const confirmBox = document.getElementById("confirm-clear");
+  document.getElementById("btn-clear").addEventListener("click", () => {
+    confirmBox.style.display = "block";
+  });
+  document.getElementById("btn-no").addEventListener("click", () => {
+    confirmBox.style.display = "none";
+  });
+  document.getElementById("btn-yes").addEventListener("click", () => {
+    confirmBox.style.display = "none";
+    snapshot();
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
+    showToast("板书已清空");
+  });
+
+  // 快捷键
+  window.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") { e.preventDefault(); undo(); return; }
+    if (e.target.tagName === "INPUT") return;
+    switch (e.key.toLowerCase()) {
+      case "b": setTool("pencil"); break;
+      case "p": setTool("pen"); break;
+      case "e": setTool("eraser"); break;
+      case "c": document.getElementById("btn-clear").click(); break;
+    }
+  });
+
+  // toast
+  let toastTimer = null;
+  function showToast(msg) {
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.style.opacity = 1;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.style.opacity = 0; }, 1400);
+  }
+
+  // 阻止触摸滚动/缩放
+  document.body.addEventListener("touchmove", e => e.preventDefault(), { passive: false });
+})();
+</script>
+
+
+</body></html>
