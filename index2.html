@@ -86,8 +86,8 @@
     box-shadow: 0 0 0 2px #262e2a, 0 0 0 4.5px #ffd670;
   }
 
-  /* ---------- 粗细（固定四档） ---------- */
-  #sizes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  /* ---------- 粗细（竖向排列：2 / 4 / 5） ---------- */
+  #sizes { display: flex; flex-direction: column; gap: 8px; align-items: center; }
   .size-dot {
     width: 26px; height: 26px; border-radius: 50%;
     border: 1.5px solid rgba(255,255,255,.18);
@@ -218,10 +218,11 @@
 
   <div data-page-node-id="pCPg94WBoKLsfBBMTmMUnw" class="divider"></div>
 
-  <!--pnid:kbQy44P8hcLhAabgig8dQ2--><!-- 粗细：4 / 5 -->
+  <!--pnid:kbQy44P8hcLhAabgig8dQ2--><!-- 粗细：2 / 4 / 5（竖向） -->
   <div data-page-node-id="yI8LxEzMyAGIUkeZSWlgod" class="tool-group">
     <div data-page-node-id="1RKEEz93nRp4qNgbsBRfoQ" id="sizes">
-      <div data-page-node-id="P6IxFmJkwSx10QJzwBUggM" class="size-dot active" data-size="4"><span data-page-node-id="nAy8XQVcnV2ZFw649JnHPY" style="width:8px; height:8px"></span></div>
+      <div class="size-dot active" data-size="2"><span style="width:5px; height:5px"></span></div>
+      <div data-page-node-id="P6IxFmJkwSx10QJzwBUggM" class="size-dot" data-size="4"><span data-page-node-id="nAy8XQVcnV2ZFw649JnHPY" style="width:8px; height:8px"></span></div>
       <div data-page-node-id="XEQshfXLP4VPmHo6qN1whB" class="size-dot" data-size="5"><span data-page-node-id="WqmeqAFtuGlvnJR4vH9l7f" style="width:12px; height:12px"></span></div>
     </div>
   </div>
@@ -272,7 +273,7 @@
   // ---------- 状态 ----------
   let tool = "pen";              // pencil | pen（圆珠笔）| fountain（钢笔）| eraser
   let color = "#1a1a1a";
-  let baseSize = 4;              // 笔触粗细：4 / 5 两档，默认最小
+  let baseSize = 2;              // 笔触粗细：2 / 4 / 5 三档（竖排），默认最小
   let drawing = false;
   let erased = false;            // 本次笔迹是否动过橡皮擦（决定快照时机）
 
